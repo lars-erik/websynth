@@ -1,17 +1,32 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <sequencer :beats="beats"></sequencer>
+    <pre>{{debugOutput}}</pre>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Sequencer from './components/Sequencer.vue'
+import Vue from "vue";
 
 export default {
   name: 'app',
+  data() {
+    return {
+      beats: [],
+      debugOutput: ""
+    }
+  },
   components: {
-    HelloWorld
+    Sequencer
+  },
+  watch: {
+    beats: {
+      handler() {
+        Vue.set(this,"debugOutput", JSON.stringify(this.beats));
+      },
+      deep: true
+    }
   }
 }
 </script>
