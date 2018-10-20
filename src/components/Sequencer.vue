@@ -81,6 +81,8 @@ export default {
 <style>
     .sequencer {
         position: relative;
+        display:inline-block;
+        float: left;
         padding: 10px;
         width: 1288px;
         height: 262px;

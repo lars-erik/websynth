@@ -9,11 +9,16 @@
     </div>
     <div>
     <label>Phat saw</label>
-    <sequencer :beats="tracks[0]" :currentNote="playedNote"></sequencer>
+      <div class="row">
+        <synth :saw="sawSettings"></synth>
+        <sequencer :beats="tracks[0]" :currentNote="playedNote"></sequencer>
+      </div>
     </div>
     <div>
     <label>Drums</label>
+    <div class="row">
     <sequencer :beats="tracks[1]" :currentNote="playedNote"></sequencer>
+    </div>
     </div>
     <label>Useless song output for now</label>
     <pre>{{debugOutput}}</pre>
@@ -21,8 +26,25 @@
 </template>
 
 <script>
+import Synth from './components/Synth.vue'
 import Sequencer from './components/Sequencer.vue'
 import Vue from "vue";
+
+const freqs = [
+    220.00,
+    233.08,
+    246.94,
+    261.63,
+    277.18,
+    293.66,
+    311.13,
+    329.63,
+    349.23,
+    369.99,
+    392.00,
+    415.30,
+    440.00
+];
 
 let lookahead = 25,
     scheduleAheadTime = .02;
@@ -35,6 +57,11 @@ export default {
       tracks: [[], []],
       debugOutput: "",
       ctx: null,
+      sawSettings: {
+        duration: 2,
+        attack: .1,
+        release: .5
+      },
       currentNote: 0,
       playedNote: 0,
       nextNoteTime: 0,
@@ -43,7 +70,8 @@ export default {
     }
   },
   components: {
-    Sequencer
+    Sequencer,
+    Synth
   },
   created() {
     for(let t = 0; t<this.tracks.length; t++) {
@@ -51,6 +79,12 @@ export default {
         this.tracks[t][b] = [];
       }
     }
+    this.tracks[0] = [
+      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
+      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
+      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
+      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[]
+    ];
     this.tracks[1] = [
       [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[],
       [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[],
@@ -119,22 +153,22 @@ export default {
         let env = this.ctx.createGain();
         env.gain.cancelScheduledValues(this.ctx.currentTime);
         env.gain.setValueAtTime(0, this.ctx.currentTime);
-        env.gain.linearRampToValueAtTime(.4, this.ctx.currentTime + .1);
-        env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + .9);
+        env.gain.linearRampToValueAtTime(.4, this.ctx.currentTime + Number(this.sawSettings.attack));
+        env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + Number(this.sawSettings.duration) - Number(this.sawSettings.release));
 
         let filter = this.ctx.createBiquadFilter();
         filter.type = "highpass";
-        filter.frequency.value = 1600;
+        filter.frequency.value = 2500;
 
         let filter2 = this.ctx.createBiquadFilter();
         filter2.type = "lowpass";
-        filter2.frequency.value = 200;
+        filter2.frequency.value = 800;
 
-        saw.connect(filter).connect(env).connect(this.ctx.destination);
+        // saw.connect(filter).connect(env).connect(this.ctx.destination);
         saw.connect(filter2).connect(env).connect(this.ctx.destination);
         
         saw.start();
-        saw.stop(this.ctx.currentTime + 1.5);
+        saw.stop(this.ctx.currentTime + Number(this.sawSettings.duration));
       }
     },
     bassDrum() {
@@ -203,6 +237,12 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
+}
+
+.row {
+  white-space: nowrap; 
+  height: 292px; 
+  width: 2000px;
 }
 
 input[type=range].tempo {
