@@ -8,21 +8,25 @@
     {{tempo}}
     </div>
     <div>
-    <label>Phat saw</label>
+      <label>Synth 1</label>
       <div class="row">
-        <synth :saw="sawSettings"></synth>
+        <synth :settings="synthSettings[0]"></synth>
         <sequencer :beats="tracks[0]" :currentNote="playedNote"></sequencer>
+      </div>
+    </div>
+    <div>
+      <label>Synth 2</label>
+      <div class="row">
+        <synth :settings="synthSettings[1]"></synth>
+        <sequencer :beats="tracks[1]" :currentNote="playedNote"></sequencer>
       </div>
     </div>
     <div>
     <label>Drums</label>
     <div class="row">
-    <sequencer :beats="tracks[1]" :currentNote="playedNote"></sequencer>
+    <sequencer :beats="tracks[2]" :currentNote="playedNote"></sequencer>
     </div>
     </div>
-    <label>Useless song output for now</label>
-    <pre>{{debugOutput}}</pre>
-    <pre>{{sawSettings}}</pre>
 
   </div>
 </template>
@@ -56,10 +60,11 @@ export default {
   data() {
     return {
       tempo: 90,
-      tracks: [[], []],
+      tracks: [[], [], []],
       debugOutput: "",
       ctx: null,
-      sawSettings: {
+      synthSettings: [{
+        shape: "sawtooth",
         duration: 2,
         attack: .1,
         release: .5,
@@ -69,9 +74,22 @@ export default {
         enableHighpass: true,
         highpassFreq: 2000,
         enableLfo: true,
+        lfoFreq: 4,
+        lfoShape: "square"
+      }, {
+        shape: "sine",
+        duration: 2,
+        attack: .1,
+        release: .5,
+        gain: .05,
+        enableLowpass: true,
+        lowpassFreq: 400,
+        enableHighpass: true,
+        highpassFreq: 2000,
+        enableLfo: false,
         lfoFreq: .5,
         lfoShape: "square"
-      },
+      }],
       currentNote: 0,
       playedNote: 0,
       nextNoteTime: 0,
@@ -87,35 +105,17 @@ export default {
     for(let t = 0; t<this.tracks.length; t++) {
       for(let b = 0; b<64; b++){
         this.tracks[t][b] = [];
+        for(let f = 0; f<freqs.length; f++) {
+          this.tracks[t][b][f] = false;
+        }
       }
     }
-    this.tracks[0] = [
-      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
-      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
-      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[],
-      [220],[],[261.63],[],[329.63],[],[440],[],[220],[],[261.63],[],[329.63],[],[440],[]
-    ];
-    this.tracks[1] = [
-      [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[],
-      [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[],
-      [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[],
-      [220],[],[],[],[220],[],[],[],[220],[],[],[],[220],[],[],[]
-    ];
-    Vue.set(this,"debugOutput", JSON.stringify(this.tracks));
     this.ctx = new window.AudioContext();
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
     this.scheduler();
     window.addEventListener("keypress", this.togglePlay);
-  },
-  watch: {
-    tracks: {
-      handler() {
-        Vue.set(this,"debugOutput", JSON.stringify(this.tracks));
-      },
-      deep: true
-    }
   },
   destroyed() {
     clearTimeout(this.timer);
@@ -148,18 +148,22 @@ export default {
     },
     scheduler() {
       while(this.nextNoteTime < this.ctx.currentTime + scheduleAheadTime) {
-        this.saw();
+        this.saw(this.synthSettings[0], 0);
+        this.saw(this.synthSettings[1], 1);
         this.bassDrum();
         this.nextNote();
       }
       this.timer = setTimeout(() => this.scheduler(), lookahead);
     },
-    saw() {
-      let beat = this.tracks[0][this.currentNote] || [];
-      for(let note = 0; note < beat.length; note++) {
+    saw(sawSettings, index) {
+      let beat = this.tracks[index][this.currentNote] || [];
+      for(let note = 0; note < freqs.length; note++) {
+        if (!beat[note]) {
+          continue;
+        }
         let saw = this.ctx.createOscillator();
-        saw.type = "sawtooth";
-        saw.frequency.value = beat[note];
+        saw.type = sawSettings.shape;
+        saw.frequency.value = freqs[note];
 
         let preEnv = this.ctx.createGain();
         preEnv.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -168,37 +172,36 @@ export default {
         let env = this.ctx.createGain();
         env.gain.cancelScheduledValues(this.ctx.currentTime);
         env.gain.setValueAtTime(0, this.ctx.currentTime);
-        env.gain.linearRampToValueAtTime(Number(this.sawSettings.gain), this.ctx.currentTime + Number(this.sawSettings.attack));
-        env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + Number(this.sawSettings.duration) - Number(this.sawSettings.release));
+        env.gain.linearRampToValueAtTime(Number(sawSettings.gain), this.ctx.currentTime + Number(sawSettings.attack));
+        env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + Number(sawSettings.duration) - Number(sawSettings.release));
 
         let highpass = this.ctx.createBiquadFilter();
         highpass.type = "highpass";
-        highpass.frequency.value = this.sawSettings.highpassFreq;
+        highpass.frequency.value = sawSettings.highpassFreq;
 
         let lowpass = this.ctx.createBiquadFilter();
         lowpass.type = "lowpass";
-        lowpass.frequency.value = this.sawSettings.lowpassFreq;
+        lowpass.frequency.value = sawSettings.lowpassFreq;
 
         let connections = [];
 
-        if (this.sawSettings.enableLowpass) {
+        if (sawSettings.enableLowpass) {
           connections.push(saw.connect(lowpass).connect(preEnv).connect(env));
         }
-        if (this.sawSettings.enableHighpass) {
+        if (sawSettings.enableHighpass) {
           connections.push(saw.connect(highpass).connect(preEnv).connect(env));
         }
         if (connections.length === 0) {
           connections.push(saw.connect(preEnv).connect(env));
         }
 
-        console.log(this.sawSettings.enableLfo);
-        if (this.sawSettings.enableLfo) {
+        if (sawSettings.enableLfo) {
           let lfo = this.ctx.createOscillator();
-          lfo.type = this.sawSettings.lfoShape;
-          lfo.frequency.setValueAtTime(this.sawSettings.lfoFreq, this.ctx.currentTime);
+          lfo.type = sawSettings.lfoShape;
+          lfo.frequency.setValueAtTime(sawSettings.lfoFreq, this.ctx.currentTime);
           lfo.connect(preEnv.gain);
           lfo.start();
-          lfo.stop(this.ctx.currentTime + Number(this.sawSettings.duration));
+          lfo.stop(this.ctx.currentTime + Number(sawSettings.duration));
         }
 
         for(let i = 0; i<connections.length; i++) {
@@ -206,14 +209,14 @@ export default {
         }
 
         saw.start();
-        saw.stop(this.ctx.currentTime + Number(this.sawSettings.duration));
+        saw.stop(this.ctx.currentTime + Number(sawSettings.duration));
       }
     },
     bassDrum() {
-      let beat = this.tracks[1][this.currentNote] || [];
+      let beat = this.tracks[2][this.currentNote] || [];
       
       // kick
-      if (beat.indexOf(220) > -1) {
+      if (beat[freqs.indexOf(220)]) {
         let kick = this.ctx.createOscillator();
         kick.frequency.value = 80;
 
@@ -228,7 +231,8 @@ export default {
         kick.stop(this.ctx.currentTime + 0.05);
       }
 
-      if (beat.indexOf(233.08) > -1) {
+      // snare
+      if (beat[freqs.indexOf(233.08)]) {
 
         let bufferSize = this.ctx.sampleRate;
         let buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);

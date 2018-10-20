@@ -2,8 +2,8 @@
     <div class="sequencer">
         <span v-for="(beat, $bindex) in beats" :key="$bindex" v-bind:style="beatStyle($bindex)">
             <span v-for="(freq, $findex) in freqs" :key="$findex" v-bind:style="freqStyle($bindex, $findex)">
-                <label :class="freqClass($bindex, freq)">
-                    <input type="checkbox" v-on:change="toggle($bindex, freq)" :checked="beats[$bindex].indexOf(freq) > -1"/>
+                <label :class="freqClass($bindex, $findex)">
+                    <input type="checkbox" v-model="beats[$bindex][$findex]"/>
                 </label>
             </span>
         </span>
@@ -67,8 +67,8 @@ export default {
                 height: "20px"
             }
         },
-        freqClass(bi, freq) {
-            return this.beats[bi].indexOf(freq) > -1
+        freqClass(bi, fi) {
+            return this.beats[bi][fi]
                 ? bi == this.currentNote
                     ? "active" 
                     : "selected" 

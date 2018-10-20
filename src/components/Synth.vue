@@ -2,48 +2,57 @@
     <div class="synth">
         <div class="content">
             <div>
-                <label>Duration:</label><input type="range" min="0" max="2" step=".05" v-model="saw.duration"/>
-                {{saw.duration}}
+                <label>Shape:</label>
+                <select v-model="settings.shape">
+                    <option value="sawtooth">Saw</option>
+                    <option value="sine">Sine</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                </select>
             </div>
             <div>
-                <label>Attack:</label><input type="range" min="0" max="1" step=".01" v-model="saw.attack"/>
-                {{saw.attack}}
+                <label>Duration:</label><input type="range" min="0" max="2" step=".05" v-model="settings.duration"/>
+                {{settings.duration}}
             </div>
             <div>
-                <label>Release:</label><input type="range" min="0" max="1" step=".01" v-model="saw.release"/>
-                {{saw.release}}
+                <label>Attack:</label><input type="range" min="0" max="1" step=".01" v-model="settings.attack"/>
+                {{settings.attack}}
             </div>
             <div>
-                <label>Gain:</label><input type="range" min="0" max="1" step=".01" v-model="saw.gain"/>
-                {{saw.gain}}
+                <label>Release:</label><input type="range" min="0" max="1" step=".01" v-model="settings.release"/>
+                {{settings.release}}
             </div>
             <div>
-                <label><input type="checkbox" v-model="saw.enableLowpass"/> Lowpass</label>
-                {{saw.enableLowpass}}
+                <label>Gain:</label><input type="range" min="0" max="1" step=".01" v-model="settings.gain"/>
+                {{settings.gain}}
             </div>
             <div>
-                <label>Cutoff:</label><input type="range" min="0" max="10000" step="10" v-model="saw.lowpassFreq"/>
+                <label><input type="checkbox" v-model="settings.enableLowpass"/> Lowpass</label>
+                {{settings.enableLowpass}}
             </div>
             <div>
-                <label><input type="checkbox" v-model="saw.enableHighpass"/> Highpass</label>
+                <label>Cutoff:</label><input type="range" min="0" max="10000" step="10" v-model="settings.lowpassFreq"/>
             </div>
             <div>
-                <label>Cutoff:</label><input type="range" min="0" max="10000" step="10" v-model="saw.highpassFreq"/>
-                {{saw.highpassFreq}}
+                <label><input type="checkbox" v-model="settings.enableHighpass"/> Highpass</label>
             </div>
             <div>
-                <label><input type="checkbox" v-model="saw.enableLfo"/> LFO</label>
+                <label>Cutoff:</label><input type="range" min="0" max="10000" step="10" v-model="settings.highpassFreq"/>
+                {{settings.highpassFreq}}
+            </div>
+            <div>
+                <label><input type="checkbox" v-model="settings.enableLfo"/> LFO</label>
             </div>
             <div>
                 <label>Shape:</label>
-                <select v-model="saw.lfoShape">
+                <select v-model="settings.lfoShape">
                     <option value="square">Square</option>
                     <option value="sine">Sine</option>
                 </select>
             </div>
             <div>
-                <label>Frequency:</label><input type="range" min="0" max="25" step=".01" v-model="saw.lfoFreq"/>
-                {{saw.lfoFreq}}
+                <label>Frequency:</label><input type="range" min="0" max="25" step=".01" v-model="settings.lfoFreq"/>
+                {{settings.lfoFreq}}
             </div>
         </div>
     </div>
@@ -51,11 +60,13 @@
 <script>
     export default {
         name: "synth",
-        props: ["saw"],
+        props: ["settings"],
         data() {
             return {
 
             }
+        },
+        created() {
         }
     }
 </script>
