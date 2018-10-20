@@ -2,9 +2,12 @@
     <div class="sequencer">
         <span v-for="(beat, $bindex) in beats" :key="$bindex" v-bind:style="beatStyle($bindex)">
             <span v-for="(freq, $findex) in freqs" :key="$findex" v-bind:style="freqStyle($bindex, $findex)">
-                <input type="checkbox" v-on:change="toggle($bindex, freq)"/>
+                <label :class="freqClass($bindex, freq)">
+                    <input type="checkbox" v-on:change="toggle($bindex, freq)" :checked="beats[$bindex].indexOf(freq) > -1"/>
+                </label>
             </span>
         </span>
+        <pre>{{currentNote}}</pre>
     </div>
 </template>
 <script>
@@ -28,7 +31,7 @@ const freqs = [
 
 export default {
     name: "sequencer",
-    props: ["beats"],
+    props: ["beats", "currentNote"],
     data() {
         return {
             freqs,
@@ -36,9 +39,6 @@ export default {
         }
     },
     created() {
-        for(let b = 0; b<16; b++){
-            this.beats[b] = [];
-        }
     },
     methods: {
         toggle(beat, freq) {
@@ -62,10 +62,17 @@ export default {
         freqStyle(bi, fi) {
             return {
                 position: "absolute",
-                top: (fi * 20) + "px",
+                top: ((freqs.length * 20) - ((fi + 1) * 20)) + "px",
                 width: "20px",
                 height: "20px"
             }
+        },
+        freqClass(bi, freq) {
+            return this.beats[bi].indexOf(freq) > -1
+                ? bi == this.currentNote
+                    ? "active" 
+                    : "selected" 
+                : "";
         }
     }
 }
@@ -73,10 +80,37 @@ export default {
 </script>
 <style>
     .sequencer {
+        position: relative;
         padding: 10px;
-        width: 322px;
+        width: 1288px;
         height: 262px;
         border: 1px solid #cccccc;
         border-radius: 5px;
+    }
+
+    .sequencer pre {
+        position: absolute;
+        left: 1290px;
+        background: pink;
+    }
+
+    .sequencer label {
+        display: inline-block;
+        border: 1px solid #cccccc;
+        border-radius: 6px;
+        width: 16px;
+        height: 16px;
+    }
+
+    .sequencer input {
+        visibility: hidden;
+    }
+
+    .sequencer .selected {
+        background-color: gray;
+    }
+
+    .sequencer .active {
+        background-color: yellow;
     }
 </style>
