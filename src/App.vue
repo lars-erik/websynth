@@ -22,6 +22,8 @@
     </div>
     <label>Useless song output for now</label>
     <pre>{{debugOutput}}</pre>
+    <pre>{{sawSettings}}</pre>
+
   </div>
 </template>
 
@@ -60,7 +62,15 @@ export default {
       sawSettings: {
         duration: 2,
         attack: .1,
-        release: .5
+        release: .5,
+        gain: .05,
+        enableLowpass: true,
+        lowpassFreq: 400,
+        enableHighpass: true,
+        highpassFreq: 2000,
+        enableLfo: true,
+        lfoFreq: .5,
+        lfoShape: "square"
       },
       currentNote: 0,
       playedNote: 0,
@@ -150,23 +160,51 @@ export default {
         let saw = this.ctx.createOscillator();
         saw.type = "sawtooth";
         saw.frequency.value = beat[note];
+
+        let preEnv = this.ctx.createGain();
+        preEnv.gain.cancelScheduledValues(this.ctx.currentTime);
+        preEnv.gain.setValueAtTime(1, this.ctx.currentTime);
+
         let env = this.ctx.createGain();
         env.gain.cancelScheduledValues(this.ctx.currentTime);
         env.gain.setValueAtTime(0, this.ctx.currentTime);
-        env.gain.linearRampToValueAtTime(.4, this.ctx.currentTime + Number(this.sawSettings.attack));
+        env.gain.linearRampToValueAtTime(Number(this.sawSettings.gain), this.ctx.currentTime + Number(this.sawSettings.attack));
         env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + Number(this.sawSettings.duration) - Number(this.sawSettings.release));
 
-        let filter = this.ctx.createBiquadFilter();
-        filter.type = "highpass";
-        filter.frequency.value = 2500;
+        let highpass = this.ctx.createBiquadFilter();
+        highpass.type = "highpass";
+        highpass.frequency.value = this.sawSettings.highpassFreq;
 
-        let filter2 = this.ctx.createBiquadFilter();
-        filter2.type = "lowpass";
-        filter2.frequency.value = 800;
+        let lowpass = this.ctx.createBiquadFilter();
+        lowpass.type = "lowpass";
+        lowpass.frequency.value = this.sawSettings.lowpassFreq;
 
-        // saw.connect(filter).connect(env).connect(this.ctx.destination);
-        saw.connect(filter2).connect(env).connect(this.ctx.destination);
-        
+        let connections = [];
+
+        if (this.sawSettings.enableLowpass) {
+          connections.push(saw.connect(lowpass).connect(preEnv).connect(env));
+        }
+        if (this.sawSettings.enableHighpass) {
+          connections.push(saw.connect(highpass).connect(preEnv).connect(env));
+        }
+        if (connections.length === 0) {
+          connections.push(saw.connect(preEnv).connect(env));
+        }
+
+        console.log(this.sawSettings.enableLfo);
+        if (this.sawSettings.enableLfo) {
+          let lfo = this.ctx.createOscillator();
+          lfo.type = this.sawSettings.lfoShape;
+          lfo.frequency.setValueAtTime(this.sawSettings.lfoFreq, this.ctx.currentTime);
+          lfo.connect(preEnv.gain);
+          lfo.start();
+          lfo.stop(this.ctx.currentTime + Number(this.sawSettings.duration));
+        }
+
+        for(let i = 0; i<connections.length; i++) {
+          connections[i].connect(this.ctx.destination);
+        }
+
         saw.start();
         saw.stop(this.ctx.currentTime + Number(this.sawSettings.duration));
       }
@@ -182,7 +220,7 @@ export default {
         let env = this.ctx.createGain();
         env.gain.cancelScheduledValues(this.ctx.currentTime);
         env.gain.setValueAtTime(0, this.ctx.currentTime);
-        env.gain.linearRampToValueAtTime(2, this.ctx.currentTime + .005);
+        env.gain.linearRampToValueAtTime(4, this.ctx.currentTime + .005);
         env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + .03);
 
         kick.connect(env).connect(this.ctx.destination);
