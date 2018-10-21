@@ -203,7 +203,7 @@ export default {
           lfo.stop(this.ctx.currentTime + Number(sawSettings.duration));
         }
 
-        env.connect(this.compressor);
+        env.connect(this.ctx.destination);
 
         saw.start();
         saw.stop(this.ctx.currentTime + Number(sawSettings.duration));
