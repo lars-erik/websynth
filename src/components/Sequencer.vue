@@ -3,7 +3,7 @@
         <span v-for="(beat, $bindex) in beats" :key="$bindex" v-bind:style="beatStyle($bindex)">
             <span v-for="(freq, $findex) in freqs" :key="$findex" v-bind:style="freqStyle($bindex, $findex)">
                 <label :class="freqClass($bindex, $findex)">
-                    <input type="checkbox" v-model="beats[$bindex][$findex]"/>
+                    <input type="checkbox" v-on:change="toggle($bindex, freq)"/>
                 </label>
             </span>
         </span>
@@ -34,8 +34,7 @@ export default {
     props: ["beats", "currentNote"],
     data() {
         return {
-            freqs,
-            debugOutput: ""
+            freqs: freqs
         }
     },
     created() {
@@ -49,7 +48,6 @@ export default {
                 this.beats[beat].push(freq);
             }
 
-            Vue.set(this, 'debugOutput', JSON.stringify(this.beats));
             Vue.set(this.beats, beat, this.beats[beat]);
         },
         beatStyle(bi) {
@@ -67,8 +65,8 @@ export default {
                 height: "20px"
             }
         },
-        freqClass(bi, fi) {
-            return this.beats[bi][fi]
+        freqClass(bi, freq) {
+            return this.beats[bi].indexOf(freq) > -1
                 ? bi == this.currentNote
                     ? "active" 
                     : "selected" 

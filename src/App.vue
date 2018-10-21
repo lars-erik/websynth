@@ -24,7 +24,8 @@
     <div>
     <label>Drums</label>
     <div class="row">
-    <sequencer :beats="tracks[2]" :currentNote="playedNote"></sequencer>
+      <div class="synth"></div>
+      <sequencer :beats="tracks[2]" :currentNote="playedNote"></sequencer>
     </div>
     </div>
 
@@ -105,9 +106,6 @@ export default {
     for(let t = 0; t<this.tracks.length; t++) {
       for(let b = 0; b<64; b++){
         this.tracks[t][b] = [];
-        for(let f = 0; f<freqs.length; f++) {
-          this.tracks[t][b][f] = false;
-        }
       }
     }
     this.ctx = new window.AudioContext();
@@ -157,13 +155,10 @@ export default {
     },
     saw(sawSettings, index) {
       let beat = this.tracks[index][this.currentNote] || [];
-      for(let note = 0; note < freqs.length; note++) {
-        if (!beat[note]) {
-          continue;
-        }
+      for(let note = 0; note < beat.length; note++) {
         let saw = this.ctx.createOscillator();
         saw.type = sawSettings.shape;
-        saw.frequency.value = freqs[note];
+        saw.frequency.value = beat[note];
 
         let preEnv = this.ctx.createGain();
         preEnv.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -216,7 +211,7 @@ export default {
       let beat = this.tracks[2][this.currentNote] || [];
       
       // kick
-      if (beat[freqs.indexOf(220)]) {
+      if (beat.indexOf(220) > -1) {
         let kick = this.ctx.createOscillator();
         kick.frequency.value = 80;
 
@@ -232,7 +227,7 @@ export default {
       }
 
       // snare
-      if (beat[freqs.indexOf(233.08)]) {
+      if (beat.indexOf(233.08) > -1) {
 
         let bufferSize = this.ctx.sampleRate;
         let buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
