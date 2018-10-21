@@ -59,8 +59,8 @@ export default {
         beatStyle(bi) {
             return {
                 left: 10 + (bi * 20) + "px",
-                height: (20 * this.freqs.length) + "px"
-                // ,"background-color": this.currentNote === bi - 1 ? "#FFFFCC" : "transparent" 
+                height: (20 * this.freqs.length) + "px",
+                "background-color": this.currentNote === bi - 1 ? "#FFFFCC" : "transparent" 
             }
         },
         freqStyle(bi, fi) {

@@ -1,7 +1,10 @@
 <template>
   <div id="app">
     <h1>I friggin' made a sequencer!</h1>
-    <p>Press space to toggle playing. Tick boxes to add notes. Drums are only two lower for now, kick and snare.</p>
+    <div class="share">
+      <a @click="copyToUrl()">Share tune</a> (Copy URL after clicking)
+    </div>
+    <p>Press 'Q' to toggle playing. Tick boxes to add notes. Drums are only two lower for now, kick and snare.</p>
     <div>
     <label>BPM Here</label><br/>
     <input class="tempo" type="range" min="30" max="240" v-model="tempo"/>
@@ -85,7 +88,8 @@ export default {
       nextNoteTime: 0,
       timer: null,
       playing: true,
-      compressor: null
+      compressor: null,
+      master: null
     }
   },
   components: {
@@ -100,28 +104,39 @@ export default {
     }
     
     this.ctx = new window.AudioContext();
-    
+
+    this.master = this.ctx.createGain();
+    this.master.connect(this.ctx.destination);
+
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.value = -50;
     this.compressor.knee.value = 40;
     this.compressor.ratio.value = 12;
     this.compressor.attack.value = 0;
     this.compressor.release.value = 0.25;
-    this.compressor.connect(this.ctx.destination);
+    this.compressor.connect(this.master);
     
+    if (window.location.href.indexOf("#") > -1) {
+      let tuneStr = window.location.href.substr(window.location.href.indexOf("#") + 1);
+      let tune = JSON.parse(unescape(tuneStr));
+      this.synthSettings = tune.synthSettings;
+      this.tracks = tune.tracks;
+    }
+
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
     this.scheduler();
-    window.addEventListener("keypress", this.togglePlay);
+
+    window.addEventListener("keydown", this.togglePlay);
   },
   destroyed() {
     clearTimeout(this.timer);
-    window.removeEventListener("keypress", this.togglePlay);
+    window.removeEventListener("keydown", this.togglePlay);
   },
   methods: {
     togglePlay(evt) {
-      if (evt.keyCode === 0x20) {
+      if (evt.key === 'q') {
         if (this.playing) {
           window.clearTimeout(this.timer);
         } else {
@@ -133,7 +148,25 @@ export default {
           this.scheduler();
         }
         this.playing = !this.playing;
+
+        evt.stopPropagation();
+        evt.cancelBubble = true;
+        return false;
       }
+    },
+    copyToUrl() {
+      let tune = {
+        synthSettings: this.synthSettings,
+        tracks: this.tracks
+      };
+      let serialized = escape(JSON.stringify(tune));
+
+      let url = location.href;
+      if (location.href.indexOf("#")) {
+        url = location.href.substr(0, location.href.indexOf("#"))
+      }
+
+      location.href = url + "#" + serialized;
     },
     nextNote() {
       const secondsPerBeat = 60 / (this.tempo * 4);
@@ -183,13 +216,13 @@ export default {
         preEnv.connect(env);
 
         if (sawSettings.enableLowpass) {
-          saw.connect(lowpass).connect(env);
+          saw.connect(lowpass).connect(preEnv);
         }
         if (sawSettings.enableHighpass) {
-          saw.connect(highpass).connect(env);
+          saw.connect(highpass).connect(preEnv);
         }
         if (!(sawSettings.enableLowpass || sawSettings.enableHighpass)) {
-          saw.connect(env);
+          saw.connect(preEnv);
         }
 
         if (sawSettings.enableLfo) {
@@ -201,7 +234,7 @@ export default {
           lfo.stop(this.ctx.currentTime + Number(sawSettings.duration));
         }
 
-        env.connect(this.ctx.destination);
+        env.connect(this.compressor);
 
         saw.start();
         saw.stop(this.ctx.currentTime + Number(sawSettings.duration));
@@ -221,7 +254,7 @@ export default {
         env.gain.linearRampToValueAtTime(4, this.ctx.currentTime + .005);
         env.gain.linearRampToValueAtTime(0, this.ctx.currentTime + .03);
 
-        kick.connect(env).connect(this.ctx.destination);
+        kick.connect(env).connect(this.compressor);
         kick.start();
         kick.stop(this.ctx.currentTime + 0.05);
       }
@@ -247,7 +280,7 @@ export default {
         env.gain.setValueAtTime(1, this.ctx.currentTime);
         env.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
         filter.connect(env);
-        env.connect(this.ctx.destination);
+        env.connect(this.compressor);
 
         let osc = this.ctx.createOscillator();
         osc.type = "triangle";
@@ -256,7 +289,7 @@ export default {
         oscEnv.gain.setValueAtTime(0.7, this.ctx.currentTime);
         oscEnv.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
         osc.connect(oscEnv);
-        oscEnv.connect(this.ctx.destination);
+        oscEnv.connect(this.compressor);
 
         noise.start(this.ctx.currentTime);
         osc.start(this.ctx.currentTime);
@@ -274,6 +307,10 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #2c3e50;
+}
+
+.share {
+  float: right;
 }
 
 .row {

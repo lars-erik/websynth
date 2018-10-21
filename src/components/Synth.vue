@@ -28,10 +28,10 @@
             </div>
             <div>
                 <label><input type="checkbox" v-model="settings.enableLowpass"/> Lowpass</label>
-                {{settings.enableLowpass}}
             </div>
             <div>
                 <label>Cutoff:</label><input type="range" min="0" max="10000" step="10" v-model="settings.lowpassFreq"/>
+                {{settings.lowpassFreq}}
             </div>
             <div>
                 <label><input type="checkbox" v-model="settings.enableHighpass"/> Highpass</label>
