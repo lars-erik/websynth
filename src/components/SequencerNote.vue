@@ -8,10 +8,19 @@
 export default {
     name: "sequencer-note",
     props: ["currentNote", "beat", "beatIndex", "frequencyIndex", "frequency"],
+    data() {
+        return {
+            isActive: null
+        };
+    },
     computed: {
         active: {
             get() {
-                return this.beat.indexOf(this.frequency) > -1;
+                if (this.isActive === null)
+                {
+                    this.isActive = this.beat.indexOf(this.frequency) > -1;
+                }
+                return this.isActive;
             },
             set(newValue) {
                 if (newValue) {
@@ -20,12 +29,13 @@ export default {
                     let index = this.beat.indexOf(this.frequency);
                     this.beat.splice(index, 1);
                 }
+                this.isActive = newValue;
                 this.$emit("changed");
             }
         },
         freqClass() {
-            return this.beat.indexOf(this.frequency) > -1
-                ? this.beatIndex == this.currentNote
+            return this.active
+                ? this.beatIndex === this.currentNote
                     ? "active" 
                     : "selected" 
                 : "inactive";

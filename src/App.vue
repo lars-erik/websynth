@@ -8,24 +8,27 @@
     {{tempo}}
     </div>
     <div>
+      <label>Time</label>{{currentNote}}
+    </div>
+    <div>
       <label>Synth 1</label>
       <div class="row">
         <synth :settings="synthSettings[0]"></synth>
-        <sequencer :beats="tracks[0]" :currentNote="playedNote"></sequencer>
+        <sequencer :min-freq="24" :max-freq="62" :beats="tracks[0]" :currentNote="playedNote"></sequencer>
       </div>
     </div>
     <div>
       <label>Synth 2</label>
       <div class="row">
         <synth :settings="synthSettings[1]"></synth>
-        <sequencer :beats="tracks[1]" :currentNote="playedNote"></sequencer>
+        <sequencer :min-freq="24" :max-freq="62" :beats="tracks[1]" :currentNote="playedNote"></sequencer>
       </div>
     </div>
     <div>
     <label>Drums</label>
     <div class="row">
       <div class="synth"></div>
-      <sequencer :beats="tracks[2]" :currentNote="playedNote"></sequencer>
+      <sequencer :min-freq="45" :max-freq="47" :beats="tracks[2]" :currentNote="playedNote"></sequencer>
     </div>
     </div>
 
@@ -36,25 +39,11 @@
 import Synth from './components/Synth.vue'
 import Sequencer from './components/Sequencer.vue'
 import Vue from "vue";
-
-const freqs = [
-    220.00,
-    233.08,
-    246.94,
-    261.63,
-    277.18,
-    293.66,
-    311.13,
-    329.63,
-    349.23,
-    369.99,
-    392.00,
-    415.30,
-    440.00
-];
+import Notes from "./Notes"
 
 let lookahead = 25,
-    scheduleAheadTime = .02;
+    scheduleAheadTime = .02,
+    freqs = Notes.values;
 
 export default {
   name: 'app',
@@ -65,37 +54,38 @@ export default {
       debugOutput: "",
       ctx: null,
       synthSettings: [{
-        shape: "sawtooth",
-        duration: 2,
+        shape: "sine",
+        duration: 1,
         attack: .1,
         release: .5,
-        gain: .05,
-        enableLowpass: true,
+        gain: 1,
+        enableLowpass: false,
         lowpassFreq: 400,
-        enableHighpass: true,
+        enableHighpass: false,
         highpassFreq: 2000,
-        enableLfo: true,
+        enableLfo: false,
         lfoFreq: 4,
         lfoShape: "square"
       }, {
         shape: "sine",
-        duration: 2,
+        duration: 1,
         attack: .1,
         release: .5,
-        gain: .05,
-        enableLowpass: true,
+        gain: 1,
+        enableLowpass: false,
         lowpassFreq: 400,
-        enableHighpass: true,
+        enableHighpass: false,
         highpassFreq: 2000,
         enableLfo: false,
-        lfoFreq: .5,
+        lfoFreq: 4,
         lfoShape: "square"
       }],
       currentNote: 0,
       playedNote: 0,
       nextNoteTime: 0,
       timer: null,
-      playing: true
+      playing: true,
+      compressor: null
     }
   },
   components: {
@@ -108,7 +98,17 @@ export default {
         this.tracks[t][b] = [];
       }
     }
+    
     this.ctx = new window.AudioContext();
+    
+    this.compressor = this.ctx.createDynamicsCompressor();
+    this.compressor.threshold.value = -50;
+    this.compressor.knee.value = 40;
+    this.compressor.ratio.value = 12;
+    this.compressor.attack.value = 0;
+    this.compressor.release.value = 0.25;
+    this.compressor.connect(this.ctx.destination);
+    
     if (this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
@@ -160,9 +160,9 @@ export default {
         saw.type = sawSettings.shape;
         saw.frequency.value = beat[note];
 
-        let preEnv = this.ctx.createGain();
-        preEnv.gain.cancelScheduledValues(this.ctx.currentTime);
-        preEnv.gain.setValueAtTime(1, this.ctx.currentTime);
+        // let preEnv = this.ctx.createGain();
+        // preEnv.gain.cancelScheduledValues(this.ctx.currentTime);
+        // preEnv.gain.setValueAtTime(1, this.ctx.currentTime);
 
         let env = this.ctx.createGain();
         env.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -180,14 +180,18 @@ export default {
 
         let connections = [];
 
+        let preEnv = this.ctx.createGain();
+        preEnv.gain.value = 1;
+        preEnv.connect(env);
+
         if (sawSettings.enableLowpass) {
-          connections.push(saw.connect(lowpass).connect(preEnv).connect(env));
+          saw.connect(lowpass).connect(preEnv);
         }
         if (sawSettings.enableHighpass) {
-          connections.push(saw.connect(highpass).connect(preEnv).connect(env));
+          saw.connect(highpass).connect(preEnv);
         }
         if (connections.length === 0) {
-          connections.push(saw.connect(preEnv).connect(env));
+          saw.connect(preEnv);
         }
 
         if (sawSettings.enableLfo) {
@@ -199,9 +203,7 @@ export default {
           lfo.stop(this.ctx.currentTime + Number(sawSettings.duration));
         }
 
-        for(let i = 0; i<connections.length; i++) {
-          connections[i].connect(this.ctx.destination);
-        }
+        env.connect(this.compressor);
 
         saw.start();
         saw.stop(this.ctx.currentTime + Number(sawSettings.duration));
