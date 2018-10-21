@@ -139,7 +139,7 @@ export default {
       const secondsPerBeat = 60 / (this.tempo * 4);
       this.nextNoteTime += secondsPerBeat;
       this.playedNote = this.currentNote;
-      this.currentNote++;
+      Vue.set(this, 'currentNote', this.currentNote + 1);
       if (this.currentNote === 64) {
         this.currentNote = 0;
       }

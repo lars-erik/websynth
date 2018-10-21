@@ -2,9 +2,18 @@
     <div class="sequencer">
         <span v-for="(beat, $bindex) in beats" :key="$bindex" v-bind:style="beatStyle($bindex)">
             <span v-for="(freq, $findex) in freqs" :key="$findex" v-bind:style="freqStyle($bindex, $findex)">
-                <label :class="freqClass($bindex, $findex)">
+                <sequencer-note
+                    :current-note="currentNote"
+                    :beat="beat"
+                    :beat-index="$bindex"
+                    :frequency-index="$findex"
+                    :frequency="freq"
+                    
+                    @changed="update($bindex)">
+                </sequencer-note>
+                <!-- <label :class="freqClass($bindex, $findex)">
                     <input type="checkbox" v-on:change="toggle($bindex, freq)"/>
-                </label>
+                </label> -->
             </span>
         </span>
         <pre>{{currentNote}}</pre>
@@ -12,6 +21,7 @@
 </template>
 <script>
 import Vue from "vue";
+import SequencerNote from "./SequencerNote"
 
 const freqs = [
     220.00,
@@ -31,6 +41,9 @@ const freqs = [
 
 export default {
     name: "sequencer",
+    components: {
+        SequencerNote
+    },
     props: ["beats", "currentNote"],
     data() {
         return {
@@ -40,21 +53,16 @@ export default {
     created() {
     },
     methods: {
-        toggle(beat, freq) {
-            let ext = this.beats[beat].indexOf(freq);
-            if (ext > -1) {
-                this.beats[beat].splice(ext, 1);
-            } else {
-                this.beats[beat].push(freq);
-            }
-
-            Vue.set(this.beats, beat, this.beats[beat]);
+        update(beatIndex) {
+            Vue.set(this.beats, beatIndex, this.beats[beatIndex].slice(0));
         },
         beatStyle(bi) {
             return {
                 position: "absolute",
                 left: 10 + (bi * 20) + "px",
-                width: "20px"
+                width: "20px",
+                height: (20 * freqs.length) + "px",
+                "background-color": this.currentNote === bi ? "#FFFFCC" : "transparent" 
             }
         },
         freqStyle(bi, fi) {
@@ -64,13 +72,6 @@ export default {
                 width: "20px",
                 height: "20px"
             }
-        },
-        freqClass(bi, freq) {
-            return this.beats[bi].indexOf(freq) > -1
-                ? bi == this.currentNote
-                    ? "active" 
-                    : "selected" 
-                : "";
         }
     }
 }
