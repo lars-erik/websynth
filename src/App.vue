@@ -178,20 +178,18 @@ export default {
         lowpass.type = "lowpass";
         lowpass.frequency.value = sawSettings.lowpassFreq;
 
-        let connections = [];
-
         let preEnv = this.ctx.createGain();
         preEnv.gain.value = 1;
         preEnv.connect(env);
 
         if (sawSettings.enableLowpass) {
-          saw.connect(lowpass).connect(preEnv);
+          saw.connect(lowpass).connect(env);
         }
         if (sawSettings.enableHighpass) {
-          saw.connect(highpass).connect(preEnv);
+          saw.connect(highpass).connect(env);
         }
-        if (connections.length === 0) {
-          saw.connect(preEnv);
+        if (!(sawSettings.enableLowpass || sawSettings.enableHighpass)) {
+          saw.connect(env);
         }
 
         if (sawSettings.enableLfo) {
